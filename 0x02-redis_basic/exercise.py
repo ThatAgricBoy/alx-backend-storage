@@ -21,7 +21,21 @@ class Cache:
     def get(self, key: str, fn: callable = None) -> Union[str, bytes, int, float]:
         """Get data from Redis"""
         data = self._redis.get(key)
+        if data is None:
+            return None
         return fn(data) if fn else data
+        # BEGIN: qv9d5c3jw3d4
+        def count_calls(method: callable) -> callable:
+            """Decorator to count method calls"""
+            counts = {}
+
+            def wrapper(self, *args, **kwargs):
+                key = method.__qualname__
+                counts[key] = counts.get(key, 0) + 1
+                return method(self, *args, **kwargs)
+
+            return wrapper
+        # END: qv9d5c3jw3d4
     
     def get_str(self, key: str) -> str:
         """Convert data to string"""
