@@ -4,6 +4,16 @@
 import redis
 import uuid
 from typing import Union
+from functools import wraps
+from typing import Callable
+
+
+def count_calls(fn: Callable[[], str]) -> Callable[[], str]:
+    """ Function Decorator """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+    return wrapper
 
 
 class Cache:
@@ -17,25 +27,25 @@ class Cache:
         key = str(uuid.uuid4())
         self._redis.mset({key: data})
         return key
-    
+
+    @count_calls
     def get(self, key: str, fn: callable = None) -> Union[str, bytes, int, float]:
         """Get data from Redis"""
         data = self._redis.get(key)
         return fn(data) if fn else data
-    
+
     def get_str(self, key: str) -> str:
         """Convert data to string"""
         return self.get(key, str)
-    
+
     def get_int(self, key: str) -> int:
         """Convert data to int"""
         return self.get(key, int)
-    
+
     def get_str_list(self, key: str) -> list:
         """Convert data to list of strings"""
         return self.get(key, lambda d: [s.decode('utf-8') for s in d])
-    
+
     def get_int_list(self, key: str) -> list:
         """Convert data to list of ints"""
         return self.get(key, lambda d: [int(s.decode('utf-8')) for s in d])
-    
