@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-""" A python Cache """
+"""Redis exercise"""
 
-
-import uuid
 import redis
-from typing import Callable
+import uuid
+from typing import Union
 from functools import wraps
-# from collections.abc import Callable
-
+from typing import Callable
 
 
 def count_calls(fn: Callable[[], str]) -> Callable[[], str]:
@@ -17,28 +15,37 @@ def count_calls(fn: Callable[[], str]) -> Callable[[], str]:
         return fn(*args, **kwargs)
     return wrapper
 
-class Cache():
-    """ A Cache Class """
-    def __init__(self):
-        """ Instantiate the class """
-        self._redis = redis.Redis()
+
+class Cache:
+    def __init__(self, host='localhost', port=6379, db=0):
+        """Initialize Redis instance"""
+        self._redis = redis.Redis(host, port, db)
         self._redis.flushdb()
 
-    def store(self, data: str) -> str:
-        """ Store the data in Redis using a key """
-        key = uuid.uuid4().hex
-        self._redis.set(key, data)
+    def store(self, data: Union[str, bytes, int, float]) -> str:
+        """Store data in Redis"""
+        key = str(uuid.uuid4())
+        self._redis.mset({key: data})
         return key
 
     @count_calls
-    def get(self, key: str, fn: Callable[[], str]) -> str:
-        """ Get method """
-        self._redis.get(key)
+    def get(self, key: str, fn: callable = None) -> Union[str, bytes, int, float]:
+        """Get data from Redis"""
+        data = self._redis.get(key)
+        return fn(data) if fn else data
 
     def get_str(self, key: str) -> str:
-        """ For getting cache strings """
-        self.get(key, str)
+        """Convert data to string"""
+        return self.get(key, str)
 
-    def get_int(self, key: int) -> int:
-        """ For geting cache integer """
-        self.get(key, int)
+    def get_int(self, key: str) -> int:
+        """Convert data to int"""
+        return self.get(key, int)
+
+    def get_str_list(self, key: str) -> list:
+        """Convert data to list of strings"""
+        return self.get(key, lambda d: [s.decode('utf-8') for s in d])
+
+    def get_int_list(self, key: str) -> list:
+        """Convert data to list of ints"""
+        return self.get(key, lambda d: [int(s.decode('utf-8')) for s in d])
